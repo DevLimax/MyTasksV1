@@ -1,5 +1,4 @@
 import api from '@/lib/api'
-import type { User } from '@/types/auth'
 
 export interface LoginPayload {
   email: string
@@ -13,16 +12,22 @@ export interface RegisterPayload {
 }
 
 export interface AuthResponse {
-  token: string
-  user: User
+  accessToken: string
+  refreshToken: string
+}
+
+export interface RegisterResponse {
+  id: string,
+  username: string,
+  email: string
 }
 
 export const authService = {
   login(payload: LoginPayload) {
-    return api.post<AuthResponse>('/auth/login', payload)
+    return api.post<AuthResponse>('/users/login', payload)
   },
 
   register(payload: RegisterPayload) {
-    return api.post<AuthResponse>('/auth/register', payload)
+    return api.post<RegisterResponse>('/users/create', payload)
   },
 }

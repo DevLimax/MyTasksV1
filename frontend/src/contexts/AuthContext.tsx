@@ -5,7 +5,6 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
-import api from '@/lib/api'
 import { authService } from '@/services/authService'
 import type { User, AuthContextData } from '@/types/auth'
 
@@ -15,42 +14,54 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
-  const [isLoading, setIsLoading] = useState(true)
+/** Decodifica o payload de um JWT sem verificar a assinatura (só leitura local). */
+function decodeJwtPayload(token: string): User | null {
+  try {
+    const base64 = token.split('.')[1]
+    const json = atob(base64.replace(/-/g, '+').replace(/_/g, '/'))
+    const payload = JSON.parse(json)
+    if (!payload.id || !payload.username || !payload.email) return null
+    return { id: payload.id, username: payload.username, email: payload.email }
+  } catch {
+    return null
+  }
+}
 
-  // Ao montar, valida o token armazenado buscando o perfil do usuário
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = localStorage.getItem('token')
+    return stored ? decodeJwtPayload(stored) : null
+  })
+  const isLoading = false
+
+  // Sincroniza o user sempre que o token mudar
   useEffect(() => {
     if (!token) {
-      setIsLoading(false)
+      setUser(null)
       return
     }
-
-    api
-      .get<User>('/auth/me')
-      .then((res) => setUser(res.data))
-      .catch(() => {
-        localStorage.removeItem('token')
-        setToken(null)
-      })
-      .finally(() => setIsLoading(false))
+    const decoded = decodeJwtPayload(token)
+    if (!decoded) {
+      localStorage.removeItem('token')
+      setToken(null)
+      setUser(null)
+    } else {
+      setUser(decoded)
+    }
   }, [token])
 
   async function login(email: string, password: string) {
     const res = await authService.login({ email, password })
-    const { token: newToken, user: newUser } = res.data
-    localStorage.setItem('token', newToken)
-    setToken(newToken)
-    setUser(newUser)
+    const { accessToken } = res.data
+    localStorage.setItem('token', accessToken)
+    setToken(accessToken)
   }
 
   async function register(username: string, email: string, password: string) {
-    const res = await authService.register({ username, email, password })
-    const { token: newToken, user: newUser } = res.data
-    localStorage.setItem('token', newToken)
-    setToken(newToken)
-    setUser(newUser)
+    // Cria a conta e, em seguida, faz login para obter o token
+    await authService.register({ username, email, password })
+    await login(email, password)
   }
 
   function logout() {
