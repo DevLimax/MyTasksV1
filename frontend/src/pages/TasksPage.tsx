@@ -85,8 +85,8 @@ export default function TasksPage() {
 
       {/* ── header ── */}
       <header className="border-b border-white/10 px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <h1 className="text-xl font-bold text-white">myTasks</h1>
+        <div className="mx-2 flex max-w-8xl items-center justify-between">
+          <h1 className="text-xl font-bold text-white font-mono">myTasks</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-white/50">Olá, <span className="text-white/80">{user?.username}</span></span>
             <button
